@@ -120,6 +120,16 @@ class TestBudgetYear:
         assert pf.budget_year("Budget", TODAY) == 2026
 
 
+class TestWithoutYear:
+    def test_drops_the_year_and_its_separator(self):
+        assert pf.without_year("Budget - 2026") == "Budget"
+        assert pf.without_year("Budget, 2026") == "Budget"
+        assert pf.without_year("2026 Budget") == "Budget"
+
+    def test_leaves_a_name_without_a_year(self):
+        assert pf.without_year("Household Budget") == "Household Budget"
+
+
 class TestMonthsOf:
     def test_current_year_stops_at_this_month(self):
         assert [str(m) for m in MONTHS] == ["2026-01", "2026-02", "2026-03"]

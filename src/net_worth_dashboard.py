@@ -17,8 +17,6 @@ def __():
         PALETTE,
         STYLE,
         fold,
-        kpi_row,
-        kpi_tile,
         legend,
         money,
         stacked_bars_svg,
@@ -33,8 +31,6 @@ def __():
         ShareBar,
         fold,
         html,
-        kpi_row,
-        kpi_tile,
         legend,
         mo,
         money,
@@ -105,25 +101,15 @@ def __(html, load_error, mo, pf, spreadsheet_name, tabs, today):
     year = pf.budget_year(spreadsheet_name, today)
     months = pf.months_of(year, today)
     net_worth = pf.parse_net_worth(values, months)
-    budget_items = pf.parse_budget_items(tabs[pf.BUDGET_TAB])
-    savings_log = (
-        pf.parse_savings_log(tabs[pf.SAVINGS_LOG_TAB])
-        if pf.SAVINGS_LOG_TAB in tabs
-        else {}
-    )
     breakdown = pf.net_worth_breakdown(values, months)
     nw_accounts = pf.net_worth_accounts(values, months)
-    buckets = pf.contribution_buckets(values, months)
     month_labels = [m.strftime("%b") for m in months]
     return (
         breakdown,
-        budget_items,
-        buckets,
         month_labels,
         months,
         net_worth,
         nw_accounts,
-        savings_log,
         year,
     )
 
@@ -142,102 +128,13 @@ def __(html, mo, money, net_worth, pf, reload, spreadsheet_name):
       <div class="t-header">
         <div>
           <div class="t-title">⬡ Net Worth</div>
-          <div class="t-subtitle">{html.escape(spreadsheet_name)} · Year to Date</div>
+          <div class="t-subtitle">{html.escape(pf.without_year(spreadsheet_name))} · Current balances</div>
         </div>
         <div>{reload}</div>
       </div>
       <div class="t-kpis t-kpis-3">
         {"".join(_kpi(c, net_worth[c].iloc[-1]) for c in [*pf.NET_WORTH_COMPONENTS.values(), pf.NET_WORTH])}
       </div>
-    </div>""")
-    return
-
-
-@app.cell
-def __(budget_items, kpi_row, kpi_tile, mo, net_worth, pf, savings_log):
-    # ── Investment income this year, as on the sheet's Dashboard tab ───────
-    # Dividends, interest and realized gain/loss come from the older sheet's
-    # Savings Log, so a sheet without one shows only the market change
-    _market, _share = pf.market_change(net_worth, budget_items)
-
-    def _logged(key, label):
-        return (
-            kpi_tile(label, savings_log[key], "Savings Log")
-            if key in savings_log
-            else ""
-        )
-
-    mo.Html(f"""
-    <div class="terminal">
-      {kpi_row("Investment income · this year", [
-          _logged("dividends", "Dividends"),
-          _logged("interest", "Interest"),
-          _logged("stock_gain", "Realized gain/loss"),
-          kpi_tile("Market change", _market, f"{_share:.1%} of the net worth change · after contributions and 401(k)"),
-      ])}
-    </div>""")
-    return
-
-
-@app.cell
-def __(
-    PALETTE,
-    buckets,
-    fold,
-    html,
-    legend,
-    mo,
-    money,
-    month_labels,
-    stacked_bars_svg,
-    table,
-):
-    # ── Where each month's savings went ─────────────────────────────────────
-    mo.stop(
-        buckets.empty,
-        mo.Html(
-            '<div class="terminal"><div class="t-note">No savings contributions logged this year.</div></div>'
-        ),
-    )
-    _names = list(buckets.columns)
-    _colors = [PALETTE[i % len(PALETTE)] for i in range(len(_names))]
-    _chart = stacked_bars_svg(
-        month_labels,
-        {html.escape(b): list(buckets[b]) for b in _names},
-        _colors,
-        line=list(buckets.sum(axis=1)),
-    )
-    _total = buckets.to_numpy().sum()
-    _rows = []
-    for _b in sorted(_names, key=lambda b: -buckets[b].sum()):
-        _sum = buckets[_b].sum()
-        _rows.append(
-            [(html.escape(_b), "tk")]
-            + [
-                (money(v), "pos" if v > 0 else "neg" if v < 0 else "")
-                for v in buckets[_b]
-            ]
-            + [
-                (money(_sum), "pos" if _sum >= 0 else "neg"),
-                (f"{_sum / _total:.0%}" if _total else "–", ""),
-            ]
-        )
-    _rows.append(
-        [("Total", "tk")]
-        + [(money(v), "pos" if v >= 0 else "neg") for v in buckets.sum(axis=1)]
-        + [
-            (money(_total), "pos" if _total >= 0 else "neg"),
-            ("100%" if _total else "–", ""),
-        ]
-    )
-    mo.Html(f"""
-    <div class="terminal">
-      <div class="t-section">Savings by bucket · {money(_total)} this year</div>
-      {legend([html.escape(b) for b in _names] + ["Total saved"], _colors + ["#e8edf5"])}
-      <div class="t-chart">{_chart}</div>
-      <div class="t-note">The Monthly Savings Contributions rows at the bottom of the Net Worth tab, one bucket per
-      row. Beyond eight buckets the smallest are summed into Other. A negative bar is money taken out.</div>
-      {fold(f"{len(_names)} buckets", money(_total), table(["Bucket", *month_labels, "Total", "Share"], _rows), "pos" if _total >= 0 else "neg")}
     </div>""")
     return
 
@@ -277,7 +174,6 @@ def __(PALETTE, ShareBar, html, mo, money, net_worth, nw_accounts, pf, table):
             (html.escape(r.category), "tk"),
             (money(r.value), "pos" if r.value >= 0 else "neg"),
             (_pct(r.weight), ""),
-            (money(r.change, signed=True), "pos" if r.change >= 0 else "neg"),
         ]
         for r in _summary.itertuples()
     ]
@@ -287,7 +183,7 @@ def __(PALETTE, ShareBar, html, mo, money, net_worth, nw_accounts, pf, table):
       <div class="t-chart">{category_bar}</div>
       <div class="t-note">Click a category, in the bar or its chip, to see its types, accounts and holdings below.
       Real Estate is net of the mortgage; Liabilities aren't part of the split.</div>
-      {table(["Category", "Value", "Share of assets", "Change this year"], _rows)}
+      {table(["Category", "Value", "Share of assets"], _rows)}
     </div>""")
     return by_category, by_type, category_bar
 
@@ -386,7 +282,7 @@ def __(
     mo.stop(
         _df.empty,
         mo.Html(
-            f'<div class="terminal"><div class="t-note">No {html.escape(nw_category)} accounts with a balance this year.</div></div>'
+            f'<div class="terminal"><div class="t-note">No {html.escape(nw_category)} accounts with a balance.</div></div>'
         ),
     )
     _accounts = list(_df.columns)
@@ -400,18 +296,15 @@ def __(
     _total = net_worth[nw_category].iloc[-1]
     _rows = []
     for _a in sorted(_accounts, key=lambda a: -abs(_df[a].iloc[-1])):
-        _first, _latest = _df[_a].iloc[0], _df[_a].iloc[-1]
-        _change = _latest - _first
+        _latest = _df[_a].iloc[-1]
         _rows.append(
             [
                 (html.escape(_a), "tk"),
-                (money(_first), ""),
                 (money(_latest), "pos" if _latest >= 0 else "neg"),
-                (money(_change, signed=True), "pos" if _change >= 0 else "neg"),
                 (f"{_latest / _total:.0%}" if _total else "–", ""),
             ]
         )
-    _headers = ["Account", month_labels[0], month_labels[-1], "Change", "Share"]
+    _headers = ["Account", month_labels[-1], "Share"]
     mo.Html(f"""
     <div class="terminal">
       {legend([html.escape(a) for a in _accounts] + [nw_category + " total"], _colors + ["#e8edf5"])}

@@ -80,8 +80,14 @@ def __(html, load_error, mo, pd, pf, spreadsheet_name, today, workbook):
     budgets = pf.parse_category_budgets(workbook[pf.MONTHLY_EXPENSES_TAB])
     net_worth = pf.parse_net_worth(workbook[pf.NET_WORTH_TAB], months)
     budget_items = pf.parse_budget_items(workbook[pf.BUDGET_TAB])
+    savings_log = (
+        pf.parse_savings_log(workbook[pf.SAVINGS_LOG_TAB])
+        if pf.SAVINGS_LOG_TAB in workbook
+        else {}
+    )
+    buckets = pf.contribution_buckets(workbook[pf.NET_WORTH_TAB], months)
     month_labels = [m.strftime("%b") for m in months]
-    return budget_items, budgets, expenses, month_labels, months, net_worth, year
+    return budget_items, budgets, buckets, expenses, month_labels, months, net_worth, savings_log, year
 
 
 @app.cell
@@ -122,7 +128,7 @@ def __(mo, money, monthly_spend, net_worth, pf, savings, spreadsheet_name, html,
     <div class="terminal">
       <div class="t-header">
         <div>
-          <div class="t-title">⬡ Personal Finance Terminal</div>
+          <div class="t-title">⬡ Yearly Overview</div>
           <div class="t-subtitle">{html.escape(spreadsheet_name)} · Year to Date</div>
         </div>
       </div>
@@ -137,15 +143,21 @@ def __(mo, money, monthly_spend, net_worth, pf, savings, spreadsheet_name, html,
 
 
 @app.cell
-def __(budget_items, kpi_row, kpi_tile, mo, money):
-    # ── Income and savings, as on the sheet's Dashboard tab ────────────────
-    # (its investment tiles are on the Net Worth page). A tile only appears
-    # when the Budget tab has its row.
+def __(budget_items, kpi_row, kpi_tile, mo, money, net_worth, pf, savings_log):
+    # ── Income, savings and investment income, as on the sheet's Dashboard tab ─
+    # A tile only appears when its row is found. Dividends, interest and
+    # realized gain/loss come from the older sheet's Savings Log, so a sheet
+    # without one shows only the market change.
     def _budget_tile(key, label, sub=None):
         if key not in budget_items:
             return ""
         actual, budget = budget_items[key]
         return kpi_tile(label, actual, sub or f"{money(budget)} budgeted", "amb")
+
+    _market, _share = pf.market_change(net_worth, budget_items)
+
+    def _logged(key, label):
+        return kpi_tile(label, savings_log[key], "Savings Log") if key in savings_log else ""
 
     _match = budget_items.get("401k_match", (0.0, 0.0))[0]
     mo.Html(f"""
@@ -155,6 +167,12 @@ def __(budget_items, kpi_row, kpi_tile, mo, money):
           _budget_tile("take_home", "Take-home pay"),
           _budget_tile("401k", "401(k) contributions", f"+ {money(_match)} company match" if _match else None),
           _budget_tile("total_savings", "Total savings"),
+      ])}
+      {kpi_row("Investment income · this year", [
+          _logged("dividends", "Dividends"),
+          _logged("interest", "Interest"),
+          _logged("stock_gain", "Realized gain/loss"),
+          kpi_tile("Market change", _market, f"{_share:.1%} of the net worth change · after contributions and 401(k)"),
       ])}
     </div>""")
     return
@@ -300,30 +318,45 @@ def __(budgets, everyday, expenses, fold, html, mo, money, one_offs, pf, table, 
 
 
 @app.cell
-def __(fold, mo, money, month_labels, savings, stacked_bars_svg, table):
-    # ── 2. Savings by month ─────────────────────────────────────────────────
+def __(PALETTE, buckets, fold, html, legend, mo, money, month_labels, savings, stacked_bars_svg, table):
+    # ── 2. Savings by month, split by the bucket each part went to ─────────
+    mo.stop(
+        buckets.empty,
+        mo.Html('<div class="terminal"><div class="t-section">2 · Savings by month</div><div class="t-note">No savings contributions logged this year.</div></div>'),
+    )
+    _names = list(buckets.columns)
+    _colors = [PALETTE[i % len(PALETTE)] for i in range(len(_names))]
     _chart = stacked_bars_svg(
         month_labels,
-        {"Saved": [max(v, 0) for v in savings],
-         "Withdrawn": [min(v, 0) for v in savings]},
-        ["#00d17a", "#ff4d6a"],
+        {html.escape(b): list(buckets[b]) for b in _names},
+        _colors,
+        line=list(savings),
     )
+    _total = savings.sum()
+
+    def _cell(v):
+        return (money(v), "pos" if v > 0 else "neg" if v < 0 else "")
+
     _rows = [
-        [
-            (m.strftime("%b"), "tk"),
-            (money(v), "pos" if v >= 0 else "neg"),
-            (money(t), "pos" if t >= 0 else "neg"),
-        ]
-        for m, v, t in zip(savings.index, savings, savings.cumsum())
+        [(m.strftime("%b"), "tk")]
+        + [_cell(buckets.loc[m, b]) for b in _names]
+        + [_cell(t), _cell(c)]
+        for m, t, c in zip(buckets.index, savings, savings.cumsum())
     ]
+    _rows.append(
+        [("Total", "tk")]
+        + [_cell(buckets[b].sum()) for b in _names]
+        + [_cell(_total), ("", "")]
+    )
     mo.Html(f"""
     <div class="terminal">
       <div class="t-section">2 · Savings by month</div>
-      <div class="t-legend"><span style="color:#00d17a">■ Saved</span><span style="color:#ff4d6a">■ Taken out</span></div>
+      {legend([html.escape(b) for b in _names] + ["Total saved"], _colors + ["#e8edf5"])}
       <div class="t-chart">{_chart}</div>
-      {fold(f"{len(savings)} months", f"{money(savings.sum())} saved", table(["Month", "Saved", "Year to date"], _rows), "pos" if savings.sum() >= 0 else "neg")}
-      <div class="t-note">Saved is the Monthly Savings Contributions rows at the bottom of the Net Worth tab, the same
-      figure as the Budget tab's Take-Home Savings. It's what you logged as put away, not take-home minus spending,
+      {fold(f"{len(savings)} months · {len(_names)} buckets", f"{money(_total)} saved", table(["Month", *[html.escape(b) for b in _names], "Total", "Year to date"], _rows), "pos" if _total >= 0 else "neg")}
+      <div class="t-note">Saved is the Monthly Savings Contributions rows at the bottom of the Net Worth tab, one bucket
+      per row, the same figure as the Budget tab's Take-Home Savings. Beyond eight buckets the smallest are summed into
+      Other, and a bar below zero is money taken out. It's what you logged as put away, not take-home minus spending,
       so a big purchase paid from savings, like a down payment, doesn't lower it.</div>
     </div>""")
     return

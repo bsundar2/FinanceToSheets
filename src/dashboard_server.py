@@ -1,4 +1,4 @@
-"""Serves the finance dashboard (Overview) at /, its Net Worth page at
+"""Serves the finance dashboard (Yearly Overview) at /, its Net Worth page at
 /net-worth and the P&L tracker (Swing Trading) at /pnl from one process, behind one password, so they share one URL, one login and one cold
 start on Render:
 

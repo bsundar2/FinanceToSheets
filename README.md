@@ -51,12 +51,12 @@ This writes one row per linked account (Institution, Account Name, Balance, Bala
 
 ## Personal Finance Dashboard
 `src/finance_dashboard.py` is a marimo app, styled like the P&L dashboard, that reads the yearly budget spreadsheet (`Budget - 2026`) live and shows:
-Under the headline numbers, a row of tiles mirrors the sheet's Dashboard tab: gross income, take-home pay, 401(k) contributions (plus the company match) and total savings from the Budget tab. The Dashboard tab's investment figures (dividends, interest and realized gain/loss (its `Stock Gain/Loss` row) from the Savings Log, and the year's market change: the net worth change less what you put in, including the 401(k)) are on the Net Worth page.
+Under the headline numbers, a row of tiles mirrors the sheet's Dashboard tab: gross income, take-home pay, 401(k) contributions (plus the company match) and total savings from the Budget tab. The Dashboard tab's investment figures (dividends, interest and realized gain/loss (its `Stock Gain/Loss` row) from the Savings Log, and the year's market change: the net worth change less what you put in, including the 401(k)) follow in a second row of tiles.
 1. **Spending**: your share of each Splitwise expense by month and category group (click a group in the bar above the chart to see its sub-categories by month, with each one's spending against its budget), over/under budget so far, top merchants, and the one-off expenses kept out of the charts (anything at or above an adjustable threshold, $5,000 by default, like a down payment).
-2. **Savings by month**: what you logged as saved each month (the Net Worth tab's Monthly Savings Contributions), in dollars, with a running total for the year.
+2. **Savings by month**: what you logged as saved each month (the Net Worth tab's Monthly Savings Contributions), in dollars, split by the bucket each part went to (one per contribution row: savings, brokerage, retirement...), with a running total for the year.
 3. **Net worth**: the Net Worth tab's monthly subtotals, and each month's change split into what you logged as contributions and everything else.
 
-That page is the site's **Overview**. Its **Net Worth** page (`src/net_worth_dashboard.py`) opens on your allocation: each category's share of your assets as one bar, with a table of each category's value, share and change this year. Click a category in the bar (or its chip; Liabilities has a chip too) to drill into it below: its types (stocks, ETF, crypto, foreign, 401k...) as a second bar, its accounts by month, and the securities each account holds, from the SimpleFIN `holdings_dump` tab in RH_Sheets. Clicking a type filters those holdings to it.
+That page is the site's **Yearly Overview**: everything year to date, including the investment income tiles. Its **Net Worth** page (`src/net_worth_dashboard.py`) opens on your allocation: each category's share of your assets as one bar, with a table of each category's value and share. Click a category in the bar (or its chip; Liabilities has a chip too) to drill into it below: its types (stocks, ETF, crypto, foreign, 401k...) as a second bar, its accounts by month, and the securities each account holds, from the SimpleFIN `holdings_dump` tab in RH_Sheets. Clicking a type filters those holdings to it.
 
 Run it locally with:
 ```bash
@@ -64,7 +64,7 @@ marimo run src/finance_dashboard.py
 ```
 
 ### One site: overview, net worth, swing trading and spending
-On Render, `src/dashboard_server.py` serves the finance dashboard (Overview) at `/`, its Net Worth page at `/net-worth` and the P&L tracker (Swing Trading) at `/pnl` from one service, behind one password (`FINANCE_TOKEN`; you log in once for all of them). A menu bar at the top of each page links them, plus SplitwiseToSheets's spending dashboard when `SPENDING_DASHBOARD_URL` is set. When `FIDELITY_DRIVE_FOLDER_ID` is set, the P&L page loads the newest `Accounts_History` CSV from that Drive folder by itself; uploading a CSV on the page still overrides it. Run the same thing locally with:
+On Render, `src/dashboard_server.py` serves the finance dashboard (Yearly Overview) at `/`, its Net Worth page at `/net-worth` and the P&L tracker (Swing Trading) at `/pnl` from one service, behind one password (`FINANCE_TOKEN`; you log in once for all of them). A menu bar at the top of each page links them, plus SplitwiseToSheets's spending dashboard when `SPENDING_DASHBOARD_URL` is set. When `FIDELITY_DRIVE_FOLDER_ID` is set, the P&L page loads the newest `Accounts_History` CSV from that Drive folder by itself; uploading a CSV on the page still overrides it. Run the same thing locally with:
 ```bash
 FINANCE_TOKEN=<any password> uvicorn --factory src.dashboard_server:create_app --port 2718
 ```

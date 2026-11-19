@@ -65,18 +65,22 @@ def budget_year(spreadsheet_name: str, today: pd.Timestamp) -> int:
     return int(match.group(0)) if match else today.year
 
 
+def without_year(name: str) -> str:
+    """name with any year and the separator before it dropped:
+    "Budget - 2026" -> "Budget"."""
+    return re.sub(r"[\s,\-–]*\b(19|20)\d\d\b[\s,]*", " ", name).strip(" ,-–")
+
+
 def load_net_worth_tabs(spreadsheet_name: str) -> dict[str, list[list]]:
-    """The tabs the Net Worth page reads: Net Worth, Budget (for the 401(k)
-    in the market change) and, if the sheet has one, the Savings Log."""
-    return read_values_from_sheets(
-        [NET_WORTH_TAB, BUDGET_TAB], spreadsheet_name, (SAVINGS_LOG_TAB,)
-    )
+    """The tab the Net Worth page reads: just Net Worth, since the page shows
+    current balances and leaves the year's figures to the Yearly Overview."""
+    return read_values_from_sheets([NET_WORTH_TAB], spreadsheet_name)
 
 
 def load_budget_workbook(spreadsheet_name: str) -> dict[str, list[list]]:
     """Every tab the dashboard reads, as raw cell matrices."""
     return read_values_from_sheets(
-        BUDGET_TABS, spreadsheet_name, (PARTNER_EXPENSE_LOG_TAB,)
+        BUDGET_TABS, spreadsheet_name, (PARTNER_EXPENSE_LOG_TAB, SAVINGS_LOG_TAB)
     )
 
 
