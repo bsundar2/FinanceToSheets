@@ -322,6 +322,30 @@ class TestParseNetWorth:
             )
 
 
+class TestContributionBuckets:
+    def test_one_column_per_row_by_month(self):
+        df = pf.contribution_buckets(NET_WORTH, MONTHS)
+
+        assert list(df["Savings · Individual"]) == [0, 100, 50]
+        assert list(df["Brokerage · Stocks"]) == [0, 0, 25]
+        assert list(df.sum(axis=1)) == [0, 100, 75]
+
+    def test_drops_empty_rows_and_sums_the_smallest_into_other(self):
+        rows = [r for r in NET_WORTH if r[:1] != ["Total Contributed (YTD)"]]
+        extra = [["", "Bonds", "I-Bonds", "", 0, 0, 0], ["", "Crypto", "", "", 0, 5, 0]]
+        i = next(i for i, r in enumerate(rows) if r[1:2] == ["Brokerage"])
+        df = pf.contribution_buckets(rows[: i + 1] + extra + rows[i + 1 :], MONTHS, 2)
+
+        assert "Bonds · I-Bonds" not in df.columns
+        assert list(df.columns) == ["Savings · Individual", "Other"]
+        assert list(df["Other"]) == [0, 5, 25]
+
+    def test_no_contribution_rows_is_empty(self):
+        df = pf.contribution_buckets(NET_WORTH[:11], MONTHS)
+
+        assert df.empty
+
+
 class TestNetWorthChanges:
     def test_splits_change_into_saved_and_everything_else(self):
         changes = pf.net_worth_changes(pf.parse_net_worth(NET_WORTH, MONTHS))

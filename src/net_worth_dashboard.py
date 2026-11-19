@@ -113,10 +113,12 @@ def __(html, load_error, mo, pf, spreadsheet_name, tabs, today):
     )
     breakdown = pf.net_worth_breakdown(values, months)
     nw_accounts = pf.net_worth_accounts(values, months)
+    buckets = pf.contribution_buckets(values, months)
     month_labels = [m.strftime("%b") for m in months]
     return (
         breakdown,
         budget_items,
+        buckets,
         month_labels,
         months,
         net_worth,
@@ -173,6 +175,69 @@ def __(budget_items, kpi_row, kpi_tile, mo, net_worth, pf, savings_log):
           _logged("stock_gain", "Realized gain/loss"),
           kpi_tile("Market change", _market, f"{_share:.1%} of the net worth change · after contributions and 401(k)"),
       ])}
+    </div>""")
+    return
+
+
+@app.cell
+def __(
+    PALETTE,
+    buckets,
+    fold,
+    html,
+    legend,
+    mo,
+    money,
+    month_labels,
+    stacked_bars_svg,
+    table,
+):
+    # ── Where each month's savings went ─────────────────────────────────────
+    mo.stop(
+        buckets.empty,
+        mo.Html(
+            '<div class="terminal"><div class="t-note">No savings contributions logged this year.</div></div>'
+        ),
+    )
+    _names = list(buckets.columns)
+    _colors = [PALETTE[i % len(PALETTE)] for i in range(len(_names))]
+    _chart = stacked_bars_svg(
+        month_labels,
+        {html.escape(b): list(buckets[b]) for b in _names},
+        _colors,
+        line=list(buckets.sum(axis=1)),
+    )
+    _total = buckets.to_numpy().sum()
+    _rows = []
+    for _b in sorted(_names, key=lambda b: -buckets[b].sum()):
+        _sum = buckets[_b].sum()
+        _rows.append(
+            [(html.escape(_b), "tk")]
+            + [
+                (money(v), "pos" if v > 0 else "neg" if v < 0 else "")
+                for v in buckets[_b]
+            ]
+            + [
+                (money(_sum), "pos" if _sum >= 0 else "neg"),
+                (f"{_sum / _total:.0%}" if _total else "–", ""),
+            ]
+        )
+    _rows.append(
+        [("Total", "tk")]
+        + [(money(v), "pos" if v >= 0 else "neg") for v in buckets.sum(axis=1)]
+        + [
+            (money(_total), "pos" if _total >= 0 else "neg"),
+            ("100%" if _total else "–", ""),
+        ]
+    )
+    mo.Html(f"""
+    <div class="terminal">
+      <div class="t-section">Savings by bucket · {money(_total)} this year</div>
+      {legend([html.escape(b) for b in _names] + ["Total saved"], _colors + ["#e8edf5"])}
+      <div class="t-chart">{_chart}</div>
+      <div class="t-note">The Monthly Savings Contributions rows at the bottom of the Net Worth tab, one bucket per
+      row. Beyond eight buckets the smallest are summed into Other. A negative bar is money taken out.</div>
+      {fold(f"{len(_names)} buckets", money(_total), table(["Bucket", *month_labels, "Total", "Share"], _rows), "pos" if _total >= 0 else "neg")}
     </div>""")
     return
 
