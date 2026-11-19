@@ -422,6 +422,40 @@ def net_worth_changes(net_worth: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame({"change": change, "saved": saved, "market": change - saved})
 
 
+def contribution_buckets(
+    values: list[list], months: pd.PeriodIndex, max_buckets: int = 8
+) -> pd.DataFrame:
+    """Where each month's savings went: one column per contribution row on the
+    Net Worth tab (label in column B, named like an account row, e.g.
+    "Brokerage · Stocks"), indexed by month. Rows that are $0 in every month
+    are dropped; past max_buckets, the smallest (by total) are summed into
+    "Other". A repeated label gets a " (2)" suffix."""
+    header_index, series = _net_worth_months(values, months)
+    buckets, in_contributions = {}, False
+    for row in values[header_index + 1 :]:
+        label = str(_cell(row, 0)).strip().lower()
+        if "contribution" in label and not label.startswith("total"):
+            in_contributions = True
+            continue
+        if not in_contributions:
+            continue
+        # Only the per-bucket rows (label in column B), not the "Total
+        # Contributed" and "Market Gains" rows under them
+        if not label and str(_cell(row, 1)).strip():
+            base = _account_label(row)
+            name, n = base, 2
+            while name in buckets:
+                name, n = f"{base} ({n})", n + 1
+            buckets[name] = series(row)
+    df = pd.DataFrame(buckets, index=months, dtype=float)
+    df = df.loc[:, (df != 0).any()]
+    if len(df.columns) > max_buckets:
+        order = df.abs().sum().sort_values(ascending=False).index
+        keep, rest = order[: max_buckets - 1], order[max_buckets - 1 :]
+        df = df[keep].assign(Other=df[rest].sum(axis=1))
+    return df
+
+
 # Accounts that don't add up to their subtotal (e.g. a row the subtotal
 # formula leaves out or subtracts) show up as this, so each category's
 # breakdown always sums to the subtotal charted above it
