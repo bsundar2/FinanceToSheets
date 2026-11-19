@@ -1,4 +1,4 @@
-"""The menu bar at the top of each dashboard, linking the Overview (finance
+"""The menu bar at the top of each dashboard, linking the Yearly Overview (finance
 dashboard), Net Worth and Swing Trading (P&L tracker) pages, all served by
 src/dashboard_server.py, and the spending dashboard SplitwiseToSheets hosts
 separately.
@@ -17,9 +17,9 @@ SPENDING = "spending"
 # Defaults are the paths dashboard_server.py mounts each app at. The
 # spending dashboard runs elsewhere, so it has no link unless its URL is set.
 # The last field marks a separate app (its own data, outside the budget
-# sheet the Overview and Net Worth pages share), drawn with an arrow icon.
+# sheet the Yearly Overview and Net Worth pages share), drawn with an arrow icon.
 _LINKS = [
-    (OVERVIEW, "Overview", "FINANCE_DASHBOARD_URL", "/", False),
+    (OVERVIEW, "Yearly Overview", "FINANCE_DASHBOARD_URL", "/", False),
     (NET_WORTH, "Net Worth", "NET_WORTH_DASHBOARD_URL", "/net-worth", False),
     (PNL, "Swing Trading", "PNL_DASHBOARD_URL", "/pnl", True),
     (SPENDING, "Spending", "SPENDING_DASHBOARD_URL", "", True),
