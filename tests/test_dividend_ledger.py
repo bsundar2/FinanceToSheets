@@ -9,7 +9,7 @@ import pytest
 
 from src import dividend_ledger as dl
 from src import simplefin_portfolios as sp
-from tests.test_budget_template import _has_calc, _recalculate
+from tests._libreoffice import _has_calc, _recalculate
 
 _JUL_15 = 1784073600  # 2026-07-15 UTC
 _AUG_31 = 1788134400  # 2026-08-31 UTC

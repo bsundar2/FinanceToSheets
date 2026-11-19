@@ -1,7 +1,7 @@
-"""The menu bar at the top of each dashboard, linking the Yearly Overview (finance
-dashboard), Net Worth and Swing Trading (P&L tracker) pages, all served by
-src/dashboard_server.py, and the spending dashboard SplitwiseToSheets hosts
-separately.
+"""The menu bar at the top of the P&L tracker (Swing Trading), linking the
+other dashboards: the Yearly Overview and Net Worth pages FinanceDashboards
+hosts, and the spending dashboard SplitwiseToSheets hosts. Each is a separate
+app, linked only when its URL env var is set.
 
 Kept free of third-party imports, since pnl_tracker.py also runs in the
 browser under Pyodide (marimo's html-wasm export)."""
@@ -14,14 +14,13 @@ NET_WORTH = "net_worth"
 PNL = "pnl"
 SPENDING = "spending"
 
-# Defaults are the paths dashboard_server.py mounts each app at. The
-# spending dashboard runs elsewhere, so it has no link unless its URL is set.
-# The last field marks a separate app (its own data, outside the budget
-# sheet the Yearly Overview and Net Worth pages share), drawn with an arrow icon.
+# The P&L tracker is served at / by dashboard_server.py; the others run
+# elsewhere, so they have no link unless their URL is set. The last field
+# marks a separate app, drawn with an arrow icon.
 _LINKS = [
-    (OVERVIEW, "Yearly Overview", "FINANCE_DASHBOARD_URL", "/", False),
-    (NET_WORTH, "Net Worth", "NET_WORTH_DASHBOARD_URL", "/net-worth", False),
-    (PNL, "Swing Trading", "PNL_DASHBOARD_URL", "/pnl", True),
+    (OVERVIEW, "Yearly Overview", "FINANCE_DASHBOARD_URL", "", True),
+    (NET_WORTH, "Net Worth", "NET_WORTH_DASHBOARD_URL", "", True),
+    (PNL, "Swing Trading", "PNL_DASHBOARD_URL", "/", False),
     (SPENDING, "Spending", "SPENDING_DASHBOARD_URL", "", True),
 ]
 

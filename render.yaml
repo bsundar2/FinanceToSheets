@@ -1,10 +1,9 @@
 services:
-  # The finance dashboard at /, its Net Worth page at /net-worth and the
-  # P&L tracker at /pnl, behind one
-  # password (see src/dashboard_server.py). This replaces the separate
-  # pnl-tracker service, which can be deleted in Render.
+  # The P&L tracker (Swing Trading) at /, behind a password (see
+  # src/dashboard_server.py). The Yearly Overview and Net Worth pages live in
+  # the FinanceDashboards repo.
   - type: web
-    name: finance-dashboard
+    name: pnl-tracker
     runtime: python
     plan: free
     buildCommand: pip install -r requirements.txt
@@ -16,12 +15,14 @@ services:
       # gsheets_authentication.json; Render mounts secret files here
       - key: GSHEETS_AUTH_FILE
         value: /etc/secrets/gsheets_authentication.json
-      - key: BUDGET_SPREADSHEET_NAME
-        value: Budget - 2026
       # The Drive folder holding Fidelity's Accounts_History CSV (same as the
       # GitHub Action's), so the P&L page loads it without an upload
       - key: FIDELITY_DRIVE_FOLDER_ID
         sync: false
-      # SplitwiseToSheets's spending dashboard, linked from the menu bar
+      # Menu-bar links to the other dashboards (each hidden when unset)
+      - key: FINANCE_DASHBOARD_URL
+        sync: false
+      - key: NET_WORTH_DASHBOARD_URL
+        sync: false
       - key: SPENDING_DASHBOARD_URL
         sync: false
