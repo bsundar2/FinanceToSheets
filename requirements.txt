@@ -1,0 +1,8 @@
+google-api-python-client
+google-auth
+marimo
+anywidget  # clickable charts on the Net Worth page (src/finance_widgets.py)
+pandas==2.2.0
+pygsheets
+requests
+yfinance

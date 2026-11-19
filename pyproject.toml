@@ -1,0 +1,7 @@
+[tool.marimo.runtime]
+# Lets marimo's html-wasm export resolve "from src.foo import bar" style
+# imports in src/pnl_tracker.py - without this, the notebook's own
+# directory (src/) is the only import root marimo considers, so "src"
+# itself never resolves as a package and local modules like
+# pnl_calculator.py / market_data.py don't get bundled into the export.
+pythonpath = ["."]

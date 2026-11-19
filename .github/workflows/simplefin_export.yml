@@ -1,0 +1,73 @@
+name: SimpleFIN Export
+
+on:
+  workflow_dispatch:
+    inputs:
+      preview:
+        description: "Write the brokerage and joint ledger tabs as <tab>_preview instead of replacing the live tabs"
+        type: boolean
+        default: false
+  schedule:
+    # ~6am/2pm/10pm Pacific daily, plus ~9am/12pm Pacific on weekdays while
+    # the market is open (6:30am-1pm Pacific), when brokerages tend to
+    # refresh in SimpleFIN. Expressed in UTC. GitHub Actions cron always
+    # runs in UTC and has no DST awareness, so the offset is split by month:
+    # PDT (UTC-7) roughly Mar-Nov, PST (UTC-8) roughly Nov-Mar. This can be
+    # off by up to ~1 week around the actual DST transition dates.
+    #
+    # Minute is offset to :15 rather than :00: GitHub's docs warn that
+    # top-of-the-hour cron schedules queue behind everyone else's top-of-hour
+    # jobs and can be delayed for hours during high load, which is exactly
+    # what happened on this workflow's very first scheduled run.
+    - cron: "15 13,21,5 * 3-11 *" # PDT (UTC-7): ~6am/2pm/10pm
+    - cron: "15 14,22,6 * 1,2,12 *" # PST (UTC-8): ~6am/2pm/10pm
+    - cron: "15 16,19 * 3-11 1-5" # PDT (UTC-7): ~9am/12pm, weekdays
+    - cron: "15 17,20 * 1,2,12 1-5" # PST (UTC-8): ~9am/12pm, weekdays
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Restore Google Sheets credentials
+        env:
+          GSHEETS_AUTH_JSON: ${{ secrets.GSHEETS_AUTH_JSON }}
+        run: |
+          mkdir -p data
+          printf '%s' "$GSHEETS_AUTH_JSON" > data/gsheets_authentication.json
+
+          if [ ! -s data/gsheets_authentication.json ]; then
+            echo "::error::GSHEETS_AUTH_JSON secret is empty or missing. Check Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+
+      - name: Run SimpleFIN export
+        env:
+          SIMPLEFIN_ACCESS_URL: ${{ secrets.SIMPLEFIN_ACCESS_URL }}
+          # Account ids and matchers kept out of the repo (src/household_config.py)
+          HOUSEHOLD_CONFIG: ${{ secrets.HOUSEHOLD_CONFIG }}
+          # Optional: only used to fetch the account-history CSV for
+          # fidelity_dump's YTD realized P&L cell.
+          FIDELITY_DRIVE_FOLDER_ID: ${{ secrets.FIDELITY_DRIVE_FOLDER_ID }}
+          # Empty on scheduled runs, so those always write the live tabs.
+          PORTFOLIO_TAB_SUFFIX: ${{ inputs.preview && '_preview' || '' }}
+        run: python -m src.simplefin_to_sheets
+
+      - name: Run joint account ledger export
+        env:
+          SIMPLEFIN_ACCESS_URL: ${{ secrets.SIMPLEFIN_ACCESS_URL }}
+          HOUSEHOLD_CONFIG: ${{ secrets.HOUSEHOLD_CONFIG }}
+          # A preview run writes joint_account_ledger_preview instead
+          PORTFOLIO_TAB_SUFFIX: ${{ inputs.preview && '_preview' || '' }}
+        run: python -m src.joint_account_ledger

@@ -1,0 +1,41 @@
+{
+  "prefer_available_balance_account_ids": [
+    "ACT-00000000-0000-0000-0000-000000000003"
+  ],
+  "joint_ledger": {
+    "accounts": {
+      "ACT-00000000-0000-0000-0000-000000000001": "Online Bank Joint (1111)",
+      "ACT-00000000-0000-0000-0000-000000000002": "Big Bank Joint Savings (2222)"
+    },
+    "start_date": "2026-09-06",
+    "joint_account_matchers": [
+      "2222",
+      "ONLINE BANK"
+    ],
+    "personal_account_matchers": [
+      "3333",
+      "4444"
+    ],
+    "my_payroll_matchers": [
+      "ACME CORP"
+    ],
+    "spouse_matchers": [
+      "GLOBEX INC",
+      "7777"
+    ],
+    "mortgage_matchers": [
+      "6666",
+      "MORTGAGE",
+      "HOME MTG"
+    ],
+    "mortgage_autopay_matchers": [
+      "AUTO PAY"
+    ],
+    "mortgage_payment_my_share_percent": 60,
+    "shared_bill_prefixes": [
+      "PHONECO ",
+      "PL*HOAINTERES",
+      "PL*FEEPAY"
+    ]
+  }
+}

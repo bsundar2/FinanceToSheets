@@ -1,0 +1,5 @@
+# marimo's own frame and widgets (buttons, number inputs, file upload) use
+# its dark theme, to match the dashboards' dark styling. Same setting as
+# SplitwiseToSheets's spending dashboard.
+[display]
+theme = "dark"
