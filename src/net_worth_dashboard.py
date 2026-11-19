@@ -110,6 +110,7 @@ def __(html, load_error, mo, pf, spreadsheet_name, tabs, today):
         months,
         net_worth,
         nw_accounts,
+        values,
         year,
     )
 
@@ -313,6 +314,73 @@ def __(
       smallest are summed into Other, and "{pf.UNLISTED}" is whatever the subtotal holds that its account rows
       don't add up to.</div>
       {fold(f"{len(_accounts)} accounts", f"{money(_total)} in {month_labels[-1]}", table(_headers, _rows), "pos" if _total >= 0 else "neg")}
+    </div>""")
+    return
+
+
+@app.cell
+def __(
+    fold,
+    html,
+    mo,
+    money,
+    months,
+    nw_category,
+    nw_type,
+    pf,
+    stacked_bars_svg,
+    table,
+    values,
+):
+    # ── Month-by-month performance of the selected category (or type) ──────
+    _perf = pf.monthly_performance(
+        values, months, nw_category, {nw_type} if nw_type else None
+    )
+    _scope = html.escape(" · ".join(x for x in [nw_category, nw_type] if x))
+    mo.stop(
+        _perf.empty,
+        mo.Html(
+            f'<div class="terminal"><div class="t-note">No performance for {_scope}: it needs a Monthly Savings '
+            f"Contributions row whose Type matches the accounts' Type, to tell deposits from gains.</div></div>"
+        ),
+    )
+    _labels = [m.strftime("%b") for m in _perf.index]
+    _chart = stacked_bars_svg(
+        _labels,
+        {
+            "Gain": [max(g, 0) for g in _perf["gain"]],
+            "Loss": [min(g, 0) for g in _perf["gain"]],
+        },
+        ["#00d17a", "#ff4d6a"],
+    )
+    _compound = (1 + _perf["return"].fillna(0)).prod() - 1
+    _total = _perf["gain"].sum()
+
+    def _cls(v):
+        return "pos" if v >= 0 else "neg"
+
+    _rows = [
+        [
+            (m.strftime("%b"), "tk"),
+            (money(r.opening), ""),
+            (money(r.contributed), ""),
+            (money(r.gain), _cls(r.gain)),
+            (money(r.closing), ""),
+            (
+                f"{r._5:+.2%}" if r._5 == r._5 else "–",
+                _cls(r._5) if r._5 == r._5 else "",
+            ),
+        ]
+        for m, r in zip(_perf.index, _perf.itertuples())
+    ]
+    mo.Html(f"""
+    <div class="terminal">
+      <div class="t-section">{_scope} · Monthly performance · {money(_total)} gain · {_compound:+.2%} compounded</div>
+      <div class="t-chart">{_chart}</div>
+      <div class="t-note">Each month's gain is the change in balance less the Monthly Savings Contributions rows whose
+      Type matches these accounts' Type; the return is the gain over the opening balance plus half the contributions.
+      It includes dividends and interest, and any deposit not logged as a contribution counts as a gain.</div>
+      {fold(f"{len(_rows)} months", f"{money(_total)} gain", table(["Month", "Opening", "Contributed", "Gain / (loss)", "Closing", "Return"], _rows), _cls(_total))}
     </div>""")
     return
 

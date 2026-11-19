@@ -356,6 +356,34 @@ class TestContributionBuckets:
         assert df.empty
 
 
+class TestMonthlyPerformance:
+    VALUES = [
+        _MONTH_HEADER,
+        ["INVESTMENTS"],
+        ["", "Robinhood", "Stocks", "Robinhood", 1000, 1150, 1100],
+        ["", "Fidelity", "ETF", "Fidelity", 500, 500, 520],
+        ["Subtotal – Investments", "", "", "", 1500, 1650, 1620],
+        ["NET WORTH (Assets − Liabilities)", "", "", "", 1500, 1650, 1620],
+        ["Monthly Savings Contributions"],
+        ["", "Brokerage", "Stocks", "", 0, 100, 0],
+        ["Total Contributed (YTD)", "", "", "", 0, 100, 0],
+    ]
+
+    def test_gain_is_change_less_contributions(self):
+        df = pf.monthly_performance(self.VALUES, MONTHS, "Investments", {"Stocks"})
+
+        assert list(df["opening"]) == [1000, 1150]
+        assert list(df["contributed"]) == [100, 0]
+        assert list(df["gain"]) == [50, -50]
+        assert df["return"].iloc[0] == pytest.approx(50 / 1050)
+
+    def test_no_matching_contribution_row_is_empty(self):
+        assert pf.monthly_performance(self.VALUES, MONTHS, "Investments", {"ETF"}).empty
+
+    def test_unknown_category_is_empty(self):
+        assert pf.monthly_performance(self.VALUES, MONTHS, "Retirement").empty
+
+
 class TestNetWorthChanges:
     def test_splits_change_into_saved_and_everything_else(self):
         changes = pf.net_worth_changes(pf.parse_net_worth(NET_WORTH, MONTHS))

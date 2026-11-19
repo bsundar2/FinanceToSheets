@@ -460,6 +460,62 @@ def contribution_buckets(
     return df
 
 
+def monthly_performance(
+    values: list[list],
+    months: pd.PeriodIndex,
+    component: str,
+    types: set[str] | None = None,
+) -> pd.DataFrame:
+    """Month-by-month performance of one category's accounts (only those whose
+    Type, column C, is in `types`, if given): per month from the second on,
+    the opening and closing balance, what you put in (the Monthly Savings
+    Contributions rows whose Type matches one of the accounts' types, case-
+    insensitively), the gain (closing - opening - contributed) and its return
+    on the opening balance plus half the contributions (a simple Modified
+    Dietz). Empty when the category has no such accounts or no contribution
+    row matches them, since the gain can't be separated from deposits then."""
+    _, series, sections = _net_worth_sections(values, months)
+    rows = next((r for c, r, _ in sections if c == component), {})
+    wanted_types = None if types is None else {_norm(t) for t in types}
+    chosen = [
+        row
+        for row in rows.values()
+        if wanted_types is None or _norm(_cell(row, 2) or _cell(row, 1)) in wanted_types
+    ]
+    if not chosen:
+        return pd.DataFrame()
+    balance = pd.Series(
+        [sum(v) for v in zip(*(series(row) for row in chosen))], index=months
+    )
+    wanted = {_norm(_cell(row, 2)) for row in chosen} - {""}
+
+    header_index, plain = _net_worth_months(values, months)
+    put_in, matched, in_contributions = pd.Series(0.0, index=months), False, False
+    for row in values[header_index + 1 :]:
+        label = str(_cell(row, 0)).strip().lower()
+        if "contribution" in label and not label.startswith("total"):
+            in_contributions = True
+        elif in_contributions and not label and str(_cell(row, 1)).strip():
+            if _norm(_cell(row, 2)) in wanted:
+                put_in += plain(row)
+                matched = True
+    if not matched:
+        return pd.DataFrame()
+    opening, closing = balance.shift(1), balance
+    gain = closing - opening - put_in
+    base = opening + put_in / 2
+    df = pd.DataFrame(
+        {
+            "opening": opening,
+            "contributed": put_in,
+            "gain": gain,
+            "closing": closing,
+            "return": (gain / base).where(base > 0),
+        }
+    ).iloc[1:]
+    return df
+
+
 # Accounts that don't add up to their subtotal (e.g. a row the subtotal
 # formula leaves out or subtracts) show up as this, so each category's
 # breakdown always sums to the subtotal charted above it
