@@ -128,7 +128,7 @@ def __(html, mo, money, net_worth, pf, reload, spreadsheet_name):
       <div class="t-header">
         <div>
           <div class="t-title">⬡ Net Worth</div>
-          <div class="t-subtitle">{html.escape(spreadsheet_name)} · Current balances</div>
+          <div class="t-subtitle">{html.escape(pf.without_year(spreadsheet_name))} · Current balances</div>
         </div>
         <div>{reload}</div>
       </div>
@@ -282,7 +282,7 @@ def __(
     mo.stop(
         _df.empty,
         mo.Html(
-            f'<div class="terminal"><div class="t-note">No {html.escape(nw_category)} accounts with a balance this year.</div></div>'
+            f'<div class="terminal"><div class="t-note">No {html.escape(nw_category)} accounts with a balance.</div></div>'
         ),
     )
     _accounts = list(_df.columns)

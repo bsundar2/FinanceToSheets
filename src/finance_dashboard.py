@@ -318,41 +318,11 @@ def __(budgets, everyday, expenses, fold, html, mo, money, one_offs, pf, table, 
 
 
 @app.cell
-def __(fold, mo, money, month_labels, savings, stacked_bars_svg, table):
-    # ── 2. Savings by month ─────────────────────────────────────────────────
-    _chart = stacked_bars_svg(
-        month_labels,
-        {"Saved": [max(v, 0) for v in savings],
-         "Withdrawn": [min(v, 0) for v in savings]},
-        ["#00d17a", "#ff4d6a"],
-    )
-    _rows = [
-        [
-            (m.strftime("%b"), "tk"),
-            (money(v), "pos" if v >= 0 else "neg"),
-            (money(t), "pos" if t >= 0 else "neg"),
-        ]
-        for m, v, t in zip(savings.index, savings, savings.cumsum())
-    ]
-    mo.Html(f"""
-    <div class="terminal">
-      <div class="t-section">2 · Savings by month</div>
-      <div class="t-legend"><span style="color:#00d17a">■ Saved</span><span style="color:#ff4d6a">■ Taken out</span></div>
-      <div class="t-chart">{_chart}</div>
-      {fold(f"{len(savings)} months", f"{money(savings.sum())} saved", table(["Month", "Saved", "Year to date"], _rows), "pos" if savings.sum() >= 0 else "neg")}
-      <div class="t-note">Saved is the Monthly Savings Contributions rows at the bottom of the Net Worth tab, the same
-      figure as the Budget tab's Take-Home Savings. It's what you logged as put away, not take-home minus spending,
-      so a big purchase paid from savings, like a down payment, doesn't lower it.</div>
-    </div>""")
-    return
-
-
-@app.cell
-def __(PALETTE, buckets, fold, html, legend, mo, money, month_labels, stacked_bars_svg, table):
-    # ── Savings by bucket ───────────────────────────────────────────────────
+def __(PALETTE, buckets, fold, html, legend, mo, money, month_labels, savings, stacked_bars_svg, table):
+    # ── 2. Savings by month, split by the bucket each part went to ─────────
     mo.stop(
         buckets.empty,
-        mo.Html('<div class="terminal"><div class="t-note">No savings contributions logged this year.</div></div>'),
+        mo.Html('<div class="terminal"><div class="t-section">2 · Savings by month</div><div class="t-note">No savings contributions logged this year.</div></div>'),
     )
     _names = list(buckets.columns)
     _colors = [PALETTE[i % len(PALETTE)] for i in range(len(_names))]
@@ -360,30 +330,34 @@ def __(PALETTE, buckets, fold, html, legend, mo, money, month_labels, stacked_ba
         month_labels,
         {html.escape(b): list(buckets[b]) for b in _names},
         _colors,
-        line=list(buckets.sum(axis=1)),
+        line=list(savings),
     )
-    _total = buckets.to_numpy().sum()
-    _rows = []
-    for _b in sorted(_names, key=lambda b: -buckets[b].sum()):
-        _sum = buckets[_b].sum()
-        _rows.append(
-            [(html.escape(_b), "tk")]
-            + [(money(v), "pos" if v > 0 else "neg" if v < 0 else "") for v in buckets[_b]]
-            + [(money(_sum), "pos" if _sum >= 0 else "neg"), (f"{_sum / _total:.0%}" if _total else "–", "")]
-        )
+    _total = savings.sum()
+
+    def _cell(v):
+        return (money(v), "pos" if v > 0 else "neg" if v < 0 else "")
+
+    _rows = [
+        [(m.strftime("%b"), "tk")]
+        + [_cell(buckets.loc[m, b]) for b in _names]
+        + [_cell(t), _cell(c)]
+        for m, t, c in zip(buckets.index, savings, savings.cumsum())
+    ]
     _rows.append(
         [("Total", "tk")]
-        + [(money(v), "pos" if v >= 0 else "neg") for v in buckets.sum(axis=1)]
-        + [(money(_total), "pos" if _total >= 0 else "neg"), ("100%" if _total else "–", "")]
+        + [_cell(buckets[b].sum()) for b in _names]
+        + [_cell(_total), ("", "")]
     )
     mo.Html(f"""
     <div class="terminal">
-      <div class="t-section">Savings by bucket · {money(_total)} this year</div>
+      <div class="t-section">2 · Savings by month, by bucket</div>
       {legend([html.escape(b) for b in _names] + ["Total saved"], _colors + ["#e8edf5"])}
       <div class="t-chart">{_chart}</div>
-      <div class="t-note">The same Monthly Savings Contributions rows, one bucket per row. Beyond eight buckets the
-      smallest are summed into Other. A negative bar is money taken out.</div>
-      {fold(f"{len(_names)} buckets", money(_total), table(["Bucket", *month_labels, "Total", "Share"], _rows), "pos" if _total >= 0 else "neg")}
+      {fold(f"{len(savings)} months · {len(_names)} buckets", f"{money(_total)} saved", table(["Month", *[html.escape(b) for b in _names], "Total", "Year to date"], _rows), "pos" if _total >= 0 else "neg")}
+      <div class="t-note">Saved is the Monthly Savings Contributions rows at the bottom of the Net Worth tab, one bucket
+      per row, the same figure as the Budget tab's Take-Home Savings. Beyond eight buckets the smallest are summed into
+      Other, and a bar below zero is money taken out. It's what you logged as put away, not take-home minus spending,
+      so a big purchase paid from savings, like a down payment, doesn't lower it.</div>
     </div>""")
     return
 
