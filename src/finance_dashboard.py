@@ -350,7 +350,7 @@ def __(PALETTE, buckets, fold, html, legend, mo, money, month_labels, savings, s
     )
     mo.Html(f"""
     <div class="terminal">
-      <div class="t-section">2 · Savings by month, by bucket</div>
+      <div class="t-section">2 · Savings by month</div>
       {legend([html.escape(b) for b in _names] + ["Total saved"], _colors + ["#e8edf5"])}
       <div class="t-chart">{_chart}</div>
       {fold(f"{len(savings)} months · {len(_names)} buckets", f"{money(_total)} saved", table(["Month", *[html.escape(b) for b in _names], "Total", "Year to date"], _rows), "pos" if _total >= 0 else "neg")}
