@@ -9,12 +9,6 @@ SHEETS_AUTHENTICATION_FILE = os.environ.get(
 )
 DEFAULT_SPREADSHEET_NAME = "RH_Sheets"
 
-# The yearly budget spreadsheet the personal finance dashboard reads (it must
-# be shared with the service account). The env var lets next year's sheet be
-# swapped in without a code change.
-BUDGET_SPREADSHEET_NAME_ENV_VAR = "BUDGET_SPREADSHEET_NAME"
-DEFAULT_BUDGET_SPREADSHEET_NAME = "Budget - 2026"
-
 # Env var holding the ID of a Google Drive folder shared with the service
 # account (SHEETS_AUTHENTICATION_FILE) that holds manually-dropped Fidelity
 # account-history CSVs (the segment after /folders/ in the folder's URL). If

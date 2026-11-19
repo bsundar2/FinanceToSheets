@@ -17,7 +17,7 @@ from src.joint_account_ledger import (
     FIRST_ROW,
     summary_cells,
 )
-from tests.test_budget_template import _has_calc, _recalculate
+from tests._libreoffice import _has_calc, _recalculate
 
 
 class TestClassifyTransaction:

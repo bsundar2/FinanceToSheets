@@ -109,7 +109,7 @@ class TestCreateApp:
         with pytest.raises(RuntimeError, match=ds.PASSWORD_ENV_VAR):
             ds.create_app()
 
-    def test_mounts_the_dashboards_behind_the_gate(self, monkeypatch):
+    def test_mounts_the_p_and_l_tracker_behind_the_gate(self, monkeypatch):
         monkeypatch.setenv(ds.PASSWORD_ENV_VAR, "s3cret")
         client = TestClient(ds.create_app(), follow_redirects=False)
-        assert client.get("/pnl/").headers["location"] == "/login?next=/pnl/"
+        assert client.get("/").headers["location"] == "/login?next=/"

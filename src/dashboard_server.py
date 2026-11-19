@@ -1,13 +1,12 @@
-"""Serves the finance dashboard (Yearly Overview) at /, its Net Worth page at
-/net-worth and the P&L tracker (Swing Trading) at /pnl from one process, behind one password, so they share one URL, one login and one cold
-start on Render:
+"""Serves the P&L tracker (Swing Trading) at / behind a password, on Render:
 
     uvicorn --factory src.dashboard_server:create_app --host 0.0.0.0 --port $PORT
 
-The password is FINANCE_TOKEN. marimo's own login (`--token-password`) isn't
-used here: with several apps mounted it keeps a separate cookie per app and
-its login page redirects /pnl to the root app's form, so /pnl could never be
-logged into. PasswordGate below logs you in once for every path instead."""
+The password is FINANCE_TOKEN. PasswordGate below is used instead of marimo's
+own login (`--token-password`) so the same gate code serves the P&L tracker
+and the Yearly Overview / Net Worth site (FinanceDashboards), which keeps a
+copy: one signed cookie valid for every path, and websockets without it are
+closed."""
 
 import asyncio
 import hashlib
@@ -166,9 +165,7 @@ def create_app():
         raise RuntimeError(f"Set {PASSWORD_ENV_VAR} to the dashboards' password")
     dashboards = (
         marimo.create_asgi_app()
-        .with_app(path="/pnl", root=str(_SRC / "pnl_tracker.py"))
-        .with_app(path="/net-worth", root=str(_SRC / "net_worth_dashboard.py"))
-        .with_app(path="", root=str(_SRC / "finance_dashboard.py"))
+        .with_app(path="", root=str(_SRC / "pnl_tracker.py"))
         .build()
     )
     return PasswordGate(dashboards, password)
