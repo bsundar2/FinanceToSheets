@@ -63,7 +63,7 @@ On Render, `src/dashboard_server.py` serves the P&L tracker at `/` behind a pass
 FINANCE_TOKEN=<any password> uvicorn --factory src.dashboard_server:create_app --port 2718
 ```
 
-`render.yaml` defines the `finance-dashboard` service:
+`render.yaml` defines the `pnl-tracker` service:
 1. Share the Fidelity Drive folder with the service account's `client_email` (from `data/gsheets_authentication.json`); it's already shared for the GitHub Action.
 2. In Render, sync the Blueprint, then on the service:
    - **Environment → Secret Files**: add `gsheets_authentication.json` with the contents of `data/gsheets_authentication.json`. `GSHEETS_AUTH_FILE` already points at `/etc/secrets/gsheets_authentication.json`.
