@@ -1,5 +1,5 @@
-# RobinhoodToSheets
-Project to export Robinhood, Fidelity, and Wells Fargo portfolio data, plus SimpleFIN-linked bank/credit card/retirement balances, to Google Sheets.
+# FinanceToSheets
+Exports SimpleFIN-linked bank, credit card, brokerage and retirement accounts to Google Sheets, with brokerage tabs (Robinhood, Wells Fargo, Fidelity), a dividend ledger, a joint account ledger, and marimo dashboards over a yearly budget spreadsheet.
 
 ## How it runs
 A scheduled GitHub Action (see "SimpleFIN Bank & Savings Accounts" below) fetches every account linked in your SimpleFIN Bridge and refreshes the Robinhood, Wells Fargo and Fidelity tabs from it, three times a day, plus twice more on weekdays during market hours. Run the same export locally with:
@@ -7,7 +7,17 @@ A scheduled GitHub Action (see "SimpleFIN Bank & Savings Accounts" below) fetche
 python -m src.simplefin_to_sheets
 ```
 
-(The original Robinhood login and AWS Lambda pipeline, and the local Fidelity positions CSV and Wells Fargo `.xls` parsers, were retired once SimpleFIN covered those accounts.)
+### Running it on GitHub Actions
+`.github/workflows/simplefin_export.yml` reads these repo secrets (Settings → Secrets and variables → Actions):
+
+| Secret | What it is |
+|---|---|
+| `GSHEETS_AUTH_JSON` | The contents of the Google service account's JSON key (`data/gsheets_authentication.json` locally) |
+| `SIMPLEFIN_ACCESS_URL` | Your SimpleFIN Bridge Access URL (see below) |
+| `HOUSEHOLD_CONFIG` | Your household config JSON (see `config/household.example.json`) |
+| `FIDELITY_DRIVE_FOLDER_ID` | Optional: the Drive folder with Fidelity's account-history CSV |
+
+Secrets never reach workflow runs from forks, and the workflows log counts and tab names only, never balances, symbols or account names, since a public repo's Actions logs are public. GitHub pauses a public repo's scheduled workflows after 60 days without activity, so `keepalive.yml` re-enables them once a month. `python-tests.yml` runs the tests on pushes and pull requests.
 
 ## Fidelity YTD realized P&L
 SimpleFIN's transactions can't give realized P&L (about 90 days of history, and trades carry no quantity or price), so that figure comes from Fidelity's account-history CSV:
