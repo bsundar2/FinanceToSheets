@@ -2,7 +2,7 @@
 Exports SimpleFIN-linked bank, credit card, brokerage and retirement accounts to Google Sheets, with brokerage tabs (Robinhood, Wells Fargo, Fidelity), a dividend ledger, a joint account ledger, and a marimo P&L dashboard.
 
 ## How it runs
-A scheduled GitHub Action (see "SimpleFIN Bank & Savings Accounts" below) fetches every account linked in your SimpleFIN Bridge and refreshes the Robinhood, Wells Fargo and Fidelity tabs from it, three times a day, plus twice more on weekdays during market hours. Run the same export locally with:
+A scheduled GitHub Action (see "SimpleFIN Bank & Savings Accounts" below) fetches every account linked in your SimpleFIN Bridge and refreshes the Robinhood, Wells Fargo and Fidelity tabs from it, every 5 hours. Run the same export locally with:
 ```bash
 python -m src.simplefin_to_sheets
 ```

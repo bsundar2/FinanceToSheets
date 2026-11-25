@@ -8,21 +8,13 @@ on:
         type: boolean
         default: false
   schedule:
-    # ~6am/2pm/10pm Pacific daily, plus ~9am/12pm Pacific on weekdays while
-    # the market is open (6:30am-1pm Pacific), when brokerages tend to
-    # refresh in SimpleFIN. Expressed in UTC. GitHub Actions cron always
-    # runs in UTC and has no DST awareness, so the offset is split by month:
-    # PDT (UTC-7) roughly Mar-Nov, PST (UTC-8) roughly Nov-Mar. This can be
-    # off by up to ~1 week around the actual DST transition dates.
-    #
-    # Minute is offset to :15 rather than :00: GitHub's docs warn that
-    # top-of-the-hour cron schedules queue behind everyone else's top-of-hour
-    # jobs and can be delayed for hours during high load, which is exactly
-    # what happened on this workflow's very first scheduled run.
-    - cron: "15 13,21,5 * 3-11 *" # PDT (UTC-7): ~6am/2pm/10pm
-    - cron: "15 14,22,6 * 1,2,12 *" # PST (UTC-8): ~6am/2pm/10pm
-    - cron: "15 16,19 * 3-11 1-5" # PDT (UTC-7): ~9am/12pm, weekdays
-    - cron: "15 17,20 * 1,2,12 1-5" # PST (UTC-8): ~9am/12pm, weekdays
+    # Every 5 hours (00, 05, 10, 15, 20 UTC). 24 isn't divisible by 5, so the
+    # gap from 20:00 to the next 00:00 UTC is 4 hours. GitHub Actions cron
+    # always runs in UTC. Minute is offset to :15 rather than :00: GitHub's
+    # docs warn that top-of-the-hour cron schedules queue behind everyone
+    # else's jobs and can be delayed for hours during high load, which is
+    # exactly what happened on this workflow's very first scheduled run.
+    - cron: "15 */5 * * *"
 
 permissions:
   contents: read
